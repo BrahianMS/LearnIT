@@ -1,3 +1,4 @@
+using LearnIT.Application.DTOs.Course;
 using LearnIT.Application.Exceptions;
 using LearnIT.Application.Interfaces.Repositories;
 using LearnIT.Application.Services;
@@ -9,103 +10,81 @@ namespace LearnIT.Application.Tests.Services;
 
 public class CourseServiceTests
 {
+    private readonly Mock<ICourseRepository> _courseRepositoryMock;
+    private readonly CourseService _courseService;
+
+    public CourseServiceTests()
+    {
+        _courseRepositoryMock = new Mock<ICourseRepository>();
+        _courseService = new CourseService(_courseRepositoryMock.Object);
+    }
+
     [Fact]
     public async Task PublishCourse_WithLessons_ShouldSucceed()
     {
+        // Arrange
         var courseId = Guid.NewGuid();
-
         var course = new Course
         {
             Id = courseId,
-            Title = "Test Course",
             Status = CourseStatus.Draft,
             Lessons = new List<Lesson>
             {
-                new Lesson
-                {
-                    Id = Guid.NewGuid(),
-                    Title = "Lesson 1",
-                    IsDeleted = false
-                }
+                new Lesson { Id = Guid.NewGuid(), IsDeleted = false }
             }
         };
 
-        var courseRepositoryMock = new Mock<ICourseRepository>();
-
-        courseRepositoryMock
-            .Setup(repo => repo.GetByIdWithLessonsAsync(courseId))
+        _courseRepositoryMock.Setup(r => r.GetByIdWithLessonsAsync(courseId))
             .ReturnsAsync(course);
 
-        var service = new CourseService(courseRepositoryMock.Object);
+        // Act
+        await _courseService.PublishAsync(courseId);
 
-        await service.PublishAsync(courseId);
-
+        // Assert
         Assert.Equal(CourseStatus.Published, course.Status);
-
-        courseRepositoryMock.Verify(
-            repo => repo.SaveChangesAsync(),
-            Times.Once
-        );
+        _courseRepositoryMock.Verify(r => r.UpdateAsync(course), Times.Once);
+        _courseRepositoryMock.Verify(r => r.SaveChangesAsync(), Times.Once);
     }
-    
+
     [Fact]
     public async Task PublishCourse_WithoutLessons_ShouldFail()
     {
+        // Arrange
         var courseId = Guid.NewGuid();
-
         var course = new Course
         {
             Id = courseId,
-            Title = "Test Course",
             Status = CourseStatus.Draft,
-            Lessons = new List<Lesson>()
+            Lessons = new List<Lesson>() // No lessons
         };
 
-        var courseRepositoryMock = new Mock<ICourseRepository>();
-
-        courseRepositoryMock
-            .Setup(repo => repo.GetByIdWithLessonsAsync(courseId))
+        _courseRepositoryMock.Setup(r => r.GetByIdWithLessonsAsync(courseId))
             .ReturnsAsync(course);
 
-        var service = new CourseService(courseRepositoryMock.Object);
-        
-        await Assert.ThrowsAsync<BusinessRuleException>(
-            () => service.PublishAsync(courseId)
-        );
-        
-        courseRepositoryMock.Verify(
-            repo => repo.SaveChangesAsync(),
-            Times.Never
-        );
+        // Act & Assert
+        await Assert.ThrowsAsync<BusinessRuleException>(() => _courseService.PublishAsync(courseId));
+        _courseRepositoryMock.Verify(r => r.UpdateAsync(It.IsAny<Course>()), Times.Never);
     }
-    
+
     [Fact]
     public async Task DeleteCourse_ShouldBeSoftDelete()
     {
+        // Arrange
         var courseId = Guid.NewGuid();
-
         var course = new Course
         {
             Id = courseId,
-            Title = "Test Course",
             IsDeleted = false
         };
 
-        var courseRepositoryMock = new Mock<ICourseRepository>();
-
-        courseRepositoryMock
-            .Setup(repo => repo.GetByIdAsync(courseId))
+        _courseRepositoryMock.Setup(r => r.GetByIdAsync(courseId))
             .ReturnsAsync(course);
 
-        var service = new CourseService(courseRepositoryMock.Object);
+        // Act
+        await _courseService.SoftDeleteAsync(courseId);
 
-        await service.SoftDeleteAsync(courseId);
-
+        // Assert
         Assert.True(course.IsDeleted);
-
-        courseRepositoryMock.Verify(
-            repo => repo.SaveChangesAsync(),
-            Times.Once
-        );
+        _courseRepositoryMock.Verify(r => r.UpdateAsync(course), Times.Once);
     }
 }

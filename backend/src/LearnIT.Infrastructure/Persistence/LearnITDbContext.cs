@@ -1,9 +1,12 @@
 using LearnIT.Domain.Entities;
+using LearnIT.Infrastructure.Identity;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace LearnIT.Infrastructure.Persistence
 {
-    public class LearnITDbContext : DbContext
+    public class LearnITDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>
     {
         public LearnITDbContext(DbContextOptions<LearnITDbContext> options)
             : base(options)

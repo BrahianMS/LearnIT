@@ -1,3 +1,4 @@
+using LearnIT.Application.DTOs.Lesson;
 using LearnIT.Application.Exceptions;
 using LearnIT.Application.Interfaces.Repositories;
 using LearnIT.Application.Interfaces.Services;
@@ -18,26 +19,50 @@ public class LessonService : ILessonService
         _courseRepository = courseRepository;
     }
 
-    public async Task CreateAsync(Guid courseId, Lesson lesson)
+    public async Task<List<LessonDto>> GetByCourseIdAsync(Guid courseId)
     {
-        var course = await _courseRepository.GetByIdAsync(courseId);
+        var lessons = await _lessonRepository.GetByCourseIdAsync(courseId);
+        return lessons.Select(MapToDto).ToList();
+    }
 
-        if (course is null)
-            throw new NotFoundException("Course not found");
+    public async Task<LessonDto> CreateAsync(CreateLessonDto dto)
+    {
+        var course = await _courseRepository.GetByIdAsync(dto.CourseId);
+        if (course is null) throw new NotFoundException("Course not found");
 
-        var orderExists = await _lessonRepository
-            .ExistsWithOrderAsync(courseId, lesson.Order);
-
+        var orderExists = await _lessonRepository.ExistsWithOrderAsync(dto.CourseId, dto.Order);
         if (orderExists)
-            throw new BusinessRuleException(
-                "Lesson order must be unique within the course");
+            throw new BusinessRuleException("Lesson order must be unique within the course");
 
-        lesson.CourseId = courseId;
-        lesson.CreatedAt = DateTime.UtcNow;
-        lesson.UpdatedAt = DateTime.UtcNow;
+        var lesson = new Lesson
+        {
+            Id = Guid.NewGuid(),
+            CourseId = dto.CourseId,
+            Title = dto.Title,
+            Order = dto.Order,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            IsDeleted = false
+        };
 
         await _lessonRepository.AddAsync(lesson);
         await _lessonRepository.SaveChangesAsync();
+
+        return MapToDto(lesson);
+    }
+
+    public async Task<LessonDto> UpdateAsync(Guid lessonId, UpdateLessonDto dto)
+    {
+        var lesson = await _lessonRepository.GetByIdAsync(lessonId);
+        if (lesson is null) throw new NotFoundException("Lesson not found");
+
+        lesson.Title = dto.Title;
+        lesson.UpdatedAt = DateTime.UtcNow;
+
+        await _lessonRepository.UpdateAsync(lesson);
+        await _lessonRepository.SaveChangesAsync();
+
+        return MapToDto(lesson);
     }
 
     public async Task SoftDeleteAsync(Guid lessonId)
@@ -76,5 +101,18 @@ public class LessonService : ILessonService
 
         await _lessonRepository.UpdateAsync(lesson);
         await _lessonRepository.SaveChangesAsync();
+    }
+
+    private static LessonDto MapToDto(Lesson lesson)
+    {
+        return new LessonDto
+        {
+            Id = lesson.Id,
+            CourseId = lesson.CourseId,
+            Title = lesson.Title,
+            Order = lesson.Order,
+            CreatedAt = lesson.CreatedAt,
+            UpdatedAt = lesson.UpdatedAt
+        };
     }
 }

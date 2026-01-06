@@ -1,10 +1,12 @@
-using LearnIT.Domain.Entities;
+using LearnIT.Application.DTOs.Lesson;
 
 namespace LearnIT.Application.Interfaces.Services;
 
 public interface ILessonService
 {
-    Task CreateAsync(Guid courseId, Lesson lesson);
+    Task<List<LessonDto>> GetByCourseIdAsync(Guid courseId);
+    Task<LessonDto> CreateAsync(CreateLessonDto dto);
+    Task<LessonDto> UpdateAsync(Guid lessonId, UpdateLessonDto dto);
 
     Task SoftDeleteAsync(Guid lessonId);
 

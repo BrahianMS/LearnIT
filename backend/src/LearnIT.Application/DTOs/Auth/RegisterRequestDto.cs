@@ -11,4 +11,7 @@ public class RegisterRequestDto
     [Required]
     [MinLength(6)]
     public string Password { get; set; } = null!;
+
+    [Required]
+    public string FullName { get; set; } = null!;
 }

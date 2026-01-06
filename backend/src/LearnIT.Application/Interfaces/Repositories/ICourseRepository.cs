@@ -8,6 +8,10 @@ public interface ICourseRepository
 
     Task<Course?> GetByIdWithLessonsAsync(Guid id);
 
+    Task<List<Course>> GetAllAsync(string? searchTerm, CourseStatus? status, int page, int pageSize);
+
+    Task<int> GetTotalCountAsync(string? searchTerm, CourseStatus? status);
+
     Task AddAsync(Course course);
 
     Task UpdateAsync(Course course);

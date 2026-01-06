@@ -1,3 +1,4 @@
+using LearnIT.Application.DTOs.Lesson;
 using LearnIT.Application.Exceptions;
 using LearnIT.Application.Interfaces.Repositories;
 using LearnIT.Application.Services;
@@ -9,92 +10,64 @@ namespace LearnIT.Application.Tests.Services;
 
 public class LessonServiceTests
 {
+    private readonly Mock<ILessonRepository> _lessonRepositoryMock;
+    private readonly Mock<ICourseRepository> _courseRepositoryMock;
+    private readonly LessonService _lessonService;
+
+    public LessonServiceTests()
+    {
+        _lessonRepositoryMock = new Mock<ILessonRepository>();
+        _courseRepositoryMock = new Mock<ICourseRepository>();
+        _lessonService = new LessonService(_lessonRepositoryMock.Object, _courseRepositoryMock.Object);
+    }
+
     [Fact]
     public async Task CreateLesson_WithUniqueOrder_ShouldSucceed()
     {
+        // Arrange
         var courseId = Guid.NewGuid();
-
-        var course = new Course
+        var dto = new CreateLessonDto
         {
-            Id = courseId,
-            Title = "Course"
-        };
-
-        var lesson = new Lesson
-        {
+            CourseId = courseId,
             Title = "Lesson 1",
             Order = 1
         };
 
-        var lessonRepositoryMock = new Mock<ILessonRepository>();
-        var courseRepositoryMock = new Mock<ICourseRepository>();
+        _courseRepositoryMock.Setup(r => r.GetByIdAsync(courseId))
+            .ReturnsAsync(new Course { Id = courseId });
 
-        courseRepositoryMock
-            .Setup(repo => repo.GetByIdAsync(courseId))
-            .ReturnsAsync(course);
-
-        lessonRepositoryMock
-            .Setup(repo => repo.ExistsWithOrderAsync(courseId, lesson.Order))
+        _lessonRepositoryMock.Setup(r => r.ExistsWithOrderAsync(courseId, dto.Order))
             .ReturnsAsync(false);
 
-        var service = new LessonService(
-            lessonRepositoryMock.Object,
-            courseRepositoryMock.Object
-        );
+        // Act
+        var result = await _lessonService.CreateAsync(dto);
 
-        await service.CreateAsync(courseId, lesson);
-
-        lessonRepositoryMock.Verify(
-            repo => repo.AddAsync(It.IsAny<Lesson>()),
-            Times.Once
-        );
-
-        lessonRepositoryMock.Verify(
-            repo => repo.SaveChangesAsync(),
-            Times.Once
-        );
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(dto.Title, result.Title);
+        _lessonRepositoryMock.Verify(r => r.AddAsync(It.IsAny<Lesson>()), Times.Once);
     }
-    
+
     [Fact]
     public async Task CreateLesson_WithDuplicateOrder_ShouldFail()
     {
+        // Arrange
         var courseId = Guid.NewGuid();
-
-        var course = new Course
+        var dto = new CreateLessonDto
         {
-            Id = courseId,
-            Title = "Course"
-        };
-
-        var lesson = new Lesson
-        {
-            Title = "Lesson 1",
+            CourseId = courseId,
+            Title = "Lesson 2",
             Order = 1
         };
 
-        var lessonRepositoryMock = new Mock<ILessonRepository>();
-        var courseRepositoryMock = new Mock<ICourseRepository>();
+        _courseRepositoryMock.Setup(r => r.GetByIdAsync(courseId))
+            .ReturnsAsync(new Course { Id = courseId });
 
-        courseRepositoryMock
-            .Setup(repo => repo.GetByIdAsync(courseId))
-            .ReturnsAsync(course);
+        _lessonRepositoryMock.Setup(r => r.ExistsWithOrderAsync(courseId, dto.Order))
+            .ReturnsAsync(true); // Duplicate order
 
-        lessonRepositoryMock
-            .Setup(repo => repo.ExistsWithOrderAsync(courseId, lesson.Order))
-            .ReturnsAsync(true);
-
-        var service = new LessonService(
-            lessonRepositoryMock.Object,
-            courseRepositoryMock.Object
-        );
-
-        await Assert.ThrowsAsync<BusinessRuleException>(
-            () => service.CreateAsync(courseId, lesson)
-        );
-
-        lessonRepositoryMock.Verify(
-            repo => repo.SaveChangesAsync(),
-            Times.Never
-        );
+        // Act & Assert
+        await Assert.ThrowsAsync<BusinessRuleException>(() => _lessonService.CreateAsync(dto));
+        _lessonRepositoryMock.Verify(r => r.AddAsync(It.IsAny<Lesson>()), Times.Never);
     }
 }

@@ -1,3 +1,5 @@
+using LearnIT.Application.DTOs.Common;
+using LearnIT.Application.DTOs.Course;
 using LearnIT.Application.Exceptions;
 using LearnIT.Application.Interfaces.Repositories;
 using LearnIT.Application.Interfaces.Services;
@@ -12,6 +14,81 @@ public class CourseService : ICourseService
     public CourseService(ICourseRepository courseRepository)
     {
         _courseRepository = courseRepository;
+    }
+
+    public async Task<CourseSummaryDto> GetSummaryAsync(Guid courseId)
+    {
+        var course = await _courseRepository.GetByIdWithLessonsAsync(courseId);
+        if (course is null) throw new NotFoundException("Course not found");
+
+        return new CourseSummaryDto
+        {
+            Id = course.Id,
+            Title = course.Title,
+            Status = course.Status.ToString(),
+            TotalLessons = course.Lessons.Count(l => !l.IsDeleted),
+            LastUpdatedAt = course.UpdatedAt
+        };
+    }
+
+    public async Task<CourseDto> GetByIdAsync(Guid courseId)
+    {
+        var course = await _courseRepository.GetByIdAsync(courseId);
+        if (course is null) throw new NotFoundException("Course not found");
+
+        return MapToDto(course);
+    }
+
+    public async Task<PaginatedResult<CourseDto>> GetAllAsync(string? searchTerm, string? status, int page, int pageSize)
+    {
+        CourseStatus? courseStatus = null;
+        if (!string.IsNullOrEmpty(status) && Enum.TryParse<CourseStatus>(status, true, out var parsedStatus))
+        {
+            courseStatus = parsedStatus;
+        }
+
+        var courses = await _courseRepository.GetAllAsync(searchTerm, courseStatus, page, pageSize);
+        var totalCount = await _courseRepository.GetTotalCountAsync(searchTerm, courseStatus);
+
+        return new PaginatedResult<CourseDto>
+        {
+            Items = courses.Select(MapToDto).ToList(),
+            TotalCount = totalCount,
+            Page = page,
+            PageSize = pageSize
+        };
+    }
+
+    public async Task<CourseDto> CreateAsync(CreateCourseDto dto)
+    {
+        var course = new Course
+        {
+            Id = Guid.NewGuid(),
+            Title = dto.Title,
+            Status = CourseStatus.Draft,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            IsDeleted = false
+        };
+
+        await _courseRepository.AddAsync(course);
+        await _courseRepository.SaveChangesAsync();
+
+        return MapToDto(course);
+    }
+
+    public async Task<CourseDto> UpdateAsync(Guid courseId, UpdateCourseDto dto)
+    {
+        var course = await _courseRepository.GetByIdAsync(courseId);
+        if (course is null) throw new NotFoundException("Course not found");
+
+        course.Title = dto.Title;
+        course.UpdatedAt = DateTime.UtcNow;
+
+        await _courseRepository.UpdateAsync(course);
+        await _courseRepository.SaveChangesAsync();
+
+        return MapToDto(course);
     }
 
     public async Task PublishAsync(Guid courseId)
@@ -60,5 +137,17 @@ public class CourseService : ICourseService
 
         await _courseRepository.UpdateAsync(course);
         await _courseRepository.SaveChangesAsync();
+    }
+
+    private static CourseDto MapToDto(Course course)
+    {
+        return new CourseDto
+        {
+            Id = course.Id,
+            Title = course.Title,
+            Status = course.Status.ToString(),
+            CreatedAt = course.CreatedAt,
+            UpdatedAt = course.UpdatedAt
+        };
     }
 }
