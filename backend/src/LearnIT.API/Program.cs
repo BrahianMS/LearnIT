@@ -96,6 +96,8 @@ app.UseCors(x => x
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.UseMiddleware<LearnIT.API.Middleware.ExceptionMiddleware>();
+
 app.MapControllers();
 app.UseHttpsRedirection();
 

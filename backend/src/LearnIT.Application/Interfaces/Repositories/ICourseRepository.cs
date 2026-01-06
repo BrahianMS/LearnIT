@@ -12,6 +12,8 @@ public interface ICourseRepository
 
     Task<int> GetTotalCountAsync(string? searchTerm, CourseStatus? status);
 
+    Task<int> GetTotalLessonsCountAsync();
+
     Task AddAsync(Course course);
 
     Task UpdateAsync(Course course);

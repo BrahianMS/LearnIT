@@ -21,3 +21,8 @@ public class UpdateLessonDto
 {
     public string Title { get; set; }
 }
+
+public class ReorderLessonDto
+{
+    public int NewOrder { get; set; }
+}

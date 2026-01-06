@@ -89,18 +89,38 @@ public class LessonService : ILessonService
         if (lesson.Order == newOrder)
             return;
 
-        var exists = await _lessonRepository
-            .ExistsWithOrderAsync(lesson.CourseId, newOrder);
+        var conflictingLesson = await _lessonRepository.GetByOrderAsync(lesson.CourseId, newOrder);
 
-        if (exists)
-            throw new BusinessRuleException(
-                "Another lesson already has this order");
+        if (conflictingLesson != null)
+        {
+            // Swap logic with temp value to avoid Unique Constraint / Circular Dependency issues
+            int originalOrder = lesson.Order;
+            
+            // Step 1: Move conflicting lesson to temp
+            conflictingLesson.Order = -1; // Assuming -1 is safe/unused
+            await _lessonRepository.UpdateAsync(conflictingLesson); 
+            await _lessonRepository.SaveChangesAsync();
 
-        lesson.Order = newOrder;
-        lesson.UpdatedAt = DateTime.UtcNow;
+            // Step 2: Move target lesson to new spot
+            lesson.Order = newOrder;
+            lesson.UpdatedAt = DateTime.UtcNow;
+            await _lessonRepository.UpdateAsync(lesson);
+            await _lessonRepository.SaveChangesAsync();
 
-        await _lessonRepository.UpdateAsync(lesson);
-        await _lessonRepository.SaveChangesAsync();
+            // Step 3: Move conflicting lesson to original spot
+            conflictingLesson.Order = originalOrder;
+            conflictingLesson.UpdatedAt = DateTime.UtcNow;
+            await _lessonRepository.UpdateAsync(conflictingLesson);
+            await _lessonRepository.SaveChangesAsync();
+        }
+        else 
+        {
+            // No conflict, just move
+            lesson.Order = newOrder;
+            lesson.UpdatedAt = DateTime.UtcNow;
+            await _lessonRepository.UpdateAsync(lesson);
+            await _lessonRepository.SaveChangesAsync();
+        }
     }
 
     private static LessonDto MapToDto(Lesson lesson)

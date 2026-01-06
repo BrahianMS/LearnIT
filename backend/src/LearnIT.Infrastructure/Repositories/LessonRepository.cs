@@ -38,6 +38,12 @@ public class LessonRepository : ILessonRepository
             );
     }
 
+    public async Task<Lesson?> GetByOrderAsync(Guid courseId, int order)
+    {
+        return await _context.Lessons
+            .FirstOrDefaultAsync(l => l.CourseId == courseId && l.Order == order && !l.IsDeleted);
+    }
+
     public async Task AddAsync(Lesson lesson)
     {
         await _context.Lessons.AddAsync(lesson);

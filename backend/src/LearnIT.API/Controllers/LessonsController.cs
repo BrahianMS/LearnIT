@@ -46,9 +46,9 @@ public class LessonsController : ControllerBase
     }
 
     [HttpPatch("{id}/reorder")]
-    public async Task<IActionResult> Reorder(Guid id, [FromBody] int newOrder)
+    public async Task<IActionResult> Reorder(Guid id, [FromBody] ReorderLessonDto dto)
     {
-        await _lessonService.ReorderAsync(id, newOrder);
+        await _lessonService.ReorderAsync(id, dto.NewOrder);
         return NoContent();
     }
 }

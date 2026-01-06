@@ -9,7 +9,9 @@ public interface ILessonRepository
     Task<List<Lesson>> GetByCourseIdAsync(Guid courseId);
 
     Task<bool> ExistsWithOrderAsync(Guid courseId, int order);
-
+    
+    Task<Lesson?> GetByOrderAsync(Guid courseId, int order);
+    
     Task AddAsync(Lesson lesson);
 
     Task UpdateAsync(Lesson lesson);

@@ -71,6 +71,11 @@ public class CourseRepository : ICourseRepository
         return await query.CountAsync();
     }
 
+    public async Task<int> GetTotalLessonsCountAsync()
+    {
+        return await _context.Set<Lesson>().CountAsync(l => !l.IsDeleted);
+    }
+
     public async Task AddAsync(Course course)
     {
         await _context.Courses.AddAsync(course);

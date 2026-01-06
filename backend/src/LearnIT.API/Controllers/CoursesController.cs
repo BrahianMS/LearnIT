@@ -17,8 +17,8 @@ public class CoursesController : ControllerBase
         _courseService = courseService;
     }
 
-    [HttpGet("search")]
-    public async Task<IActionResult> Search([FromQuery] string? q, [FromQuery] string? status, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+    [HttpGet]
+    public async Task<IActionResult> GetAll([FromQuery] string? q, [FromQuery] string? status, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
         var result = await _courseService.GetAllAsync(q, status, page, pageSize);
         return Ok(result);

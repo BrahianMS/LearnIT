@@ -19,13 +19,13 @@ public class CourseService : ICourseService
     public async Task<CourseSummaryDto> GetSummaryAsync(Guid courseId)
     {
         var course = await _courseRepository.GetByIdWithLessonsAsync(courseId);
-        if (course is null) throw new NotFoundException("Course not found");
+        if (course is null) throw new NotFoundException("Curso no encontrado");
 
         return new CourseSummaryDto
         {
             Id = course.Id,
             Title = course.Title,
-            Status = course.Status.ToString(),
+            Status = (int)course.Status,
             TotalLessons = course.Lessons.Count(l => !l.IsDeleted),
             LastUpdatedAt = course.UpdatedAt
         };
@@ -34,7 +34,7 @@ public class CourseService : ICourseService
     public async Task<CourseDto> GetByIdAsync(Guid courseId)
     {
         var course = await _courseRepository.GetByIdAsync(courseId);
-        if (course is null) throw new NotFoundException("Course not found");
+        if (course is null) throw new NotFoundException("Curso no encontrado");
 
         return MapToDto(course);
     }
@@ -80,7 +80,7 @@ public class CourseService : ICourseService
     public async Task<CourseDto> UpdateAsync(Guid courseId, UpdateCourseDto dto)
     {
         var course = await _courseRepository.GetByIdAsync(courseId);
-        if (course is null) throw new NotFoundException("Course not found");
+        if (course is null) throw new NotFoundException("Curso no encontrado");
 
         course.Title = dto.Title;
         course.UpdatedAt = DateTime.UtcNow;
@@ -96,13 +96,13 @@ public class CourseService : ICourseService
         var course = await _courseRepository.GetByIdWithLessonsAsync(courseId);
 
         if (course is null)
-            throw new NotFoundException("Course not found");
+            throw new NotFoundException("Curso no encontrado");
 
         var hasActiveLessons = course.Lessons.Any(l => !l.IsDeleted);
 
         if (!hasActiveLessons)
             throw new BusinessRuleException(
-                "A course must have at least one active lesson to be published");
+                "Un curso debe tener al menos una lección activa para ser publicado");
 
         course.Status = CourseStatus.Published;
         course.UpdatedAt = DateTime.UtcNow;
@@ -116,7 +116,7 @@ public class CourseService : ICourseService
         var course = await _courseRepository.GetByIdAsync(courseId);
 
         if (course is null)
-            throw new NotFoundException("Course not found");
+            throw new NotFoundException("Curso no encontrado");
 
         course.Status = CourseStatus.Draft;
         course.UpdatedAt = DateTime.UtcNow;
@@ -130,7 +130,7 @@ public class CourseService : ICourseService
         var course = await _courseRepository.GetByIdAsync(courseId);
 
         if (course is null)
-            throw new NotFoundException("Course not found");
+            throw new NotFoundException("Curso no encontrado");
 
         course.IsDeleted = true;
         course.UpdatedAt = DateTime.UtcNow;
@@ -145,7 +145,7 @@ public class CourseService : ICourseService
         {
             Id = course.Id,
             Title = course.Title,
-            Status = course.Status.ToString(),
+            Status = (int)course.Status,
             CreatedAt = course.CreatedAt,
             UpdatedAt = course.UpdatedAt
         };

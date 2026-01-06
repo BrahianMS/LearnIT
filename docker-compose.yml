@@ -1,0 +1,40 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Password123!
+      POSTGRES_DB: LearnIT
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5455:5432"
+
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=LearnIT;Username=postgres;Password=Password123!
+      - Jwt__Key=SuperSecretKey12345678901234567890
+      - Jwt__Issuer=LearnIT
+      - Jwt__Audience=LearnITUser
+    ports:
+      - "5110:8080"
+    depends_on:
+      - db
+    restart: always
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: always
+
+volumes:
+  postgres_data:
